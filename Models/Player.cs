@@ -1,7 +1,7 @@
-﻿namespace MMOServer.Models;
-
-using System;
+﻿using System;
 using System.Net.WebSockets;
+
+namespace MMOServer.Models;
 
 public class Player
 {
