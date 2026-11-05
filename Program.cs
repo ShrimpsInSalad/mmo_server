@@ -62,7 +62,7 @@ async Task ReciveMessages(Player player)
             {
                 string jsonMessage = Encoding.UTF8.GetString(buffer, 0, result.Count);
 
-                Console.WriteLine($"[От Godot | Игрок {player.Id}]: {jsonMessage}");
+                PacketHandler.HandleMessage(player, jsonMessage);
             }
         }
     }
