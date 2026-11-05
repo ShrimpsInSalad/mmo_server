@@ -29,7 +29,7 @@ public static class GameMap
             return true; // Граница мира работает как невидимая стена
         }
 
-        // Возвращаем true, если в BitArray стоит единичка (стена), и false если пол
+        // Возвращаем true, если в BitArray стоит 1 (стена), и false если пол
         return _walls[y * Width + x];
     }
 }
