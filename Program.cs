@@ -62,7 +62,7 @@ async Task ReciveMessages(Player player)
             {
                 string jsonMessage = Encoding.UTF8.GetString(buffer, 0, result.Count);
 
-                PacketHandler.HandleMessage(player, jsonMessage);
+                await PacketHandler.HandleMessage(player, jsonMessage);
             }
         }
     }
