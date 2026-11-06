@@ -8,7 +8,7 @@ namespace MMOServer.Network;
 
 public class PacketHandler
 {
-    public static async Task HandleMessage(Player player, string jsonMessage)
+    public static async Task HandleMessage(Player player, string jsonMessage, ConnectionManager manager)
     {
         try
         {
@@ -30,7 +30,7 @@ public class PacketHandler
                     Console.WriteLine($"[Ping] Игрок {player.Name} прислал тестовый пинг.");
                     break;
                 case "move":
-                    await HandleMove(player, root);
+                    await HandleMove(player, root, manager);
                     break;
                 default:
                     Console.WriteLine($"[Внимание] Неизвестная команда '{action}' от игрока {player.Name}");
@@ -44,7 +44,7 @@ public class PacketHandler
     }
 
 
-    private static async Task HandleMove(Player player, JsonElement root)
+    private static async Task HandleMove(Player player, JsonElement root, ConnectionManager manager)
     {
         if (root.TryGetProperty("x", out JsonElement xProp) && root.TryGetProperty("y", out JsonElement yProp))
         {
@@ -65,19 +65,22 @@ public class PacketHandler
 
                 var responseObj = new
                 {
-                    @event = "moved", // Собачка '@' нужна, потому что event - зарезервированное слово в C#
+                    @event = "player_moved",
+                    id = player.Id,
                     x = targetX,
                     y = targetY
                 };
 
                 string jsonResponse = JsonSerializer.Serialize(responseObj);
 
-                byte[] bytes = Encoding.UTF8.GetBytes(jsonResponse);
-                await player.ClientSocket.SendAsync(
-                    new ArraySegment<byte>(bytes),
-                    WebSocketMessageType.Text,
-                    true,
-                    CancellationToken.None);
+                await manager.BroadcastAsync(jsonResponse);
+
+                //byte[] bytes = Encoding.UTF8.GetBytes(jsonResponse);
+                //await player.ClientSocket.SendAsync(
+                //    new ArraySegment<byte>(bytes),
+                //    WebSocketMessageType.Text,
+                //    true,
+                //    CancellationToken.None);
             }
             else
             {

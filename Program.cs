@@ -5,6 +5,7 @@ using MMOServer.Network;
 using System;
 using System.Net.WebSockets;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -28,6 +29,20 @@ app.Map("/ws", async context =>
         Player newPlayer = new Player(randomId, $"Player_{randomId}", webSocket, startPos);
 
         connectionManager.AddPlayer(newPlayer);
+
+        var welcomeObj = new
+        {
+            @event = "welcome",
+            my_id = newPlayer.Id,
+            x = newPlayer.Position.X,
+            y = newPlayer.Position.Y
+        };
+        string welcomeJson = JsonSerializer.Serialize(welcomeObj);
+        await newPlayer.ClientSocket.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(welcomeJson)), WebSocketMessageType.Text, true, CancellationToken.None);
+
+        var joinedObj = new { @event = "player_joined", id = newPlayer.Id, x = newPlayer.Position.X, y = newPlayer.Position.Y };
+        await connectionManager.BroadcastAsync(JsonSerializer.Serialize(joinedObj));
+
 
         await ReciveMessages(newPlayer);
 
@@ -62,7 +77,7 @@ async Task ReciveMessages(Player player)
             {
                 string jsonMessage = Encoding.UTF8.GetString(buffer, 0, result.Count);
 
-                await PacketHandler.HandleMessage(player, jsonMessage);
+                await PacketHandler.HandleMessage(player, jsonMessage, connectionManager);
             }
         }
     }
