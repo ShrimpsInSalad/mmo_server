@@ -30,12 +30,21 @@ app.Map("/ws", async context =>
 
         connectionManager.AddPlayer(newPlayer);
 
+        var existingPlayers = connectionManager.GetAllPlayers()
+        .Where(p => p.Id != newPlayer.Id)
+        .Select(p => new {
+        id = p.Id,
+        x = p.Position.X,
+        y = p.Position.Y
+        }).ToList();
+
         var welcomeObj = new
         {
             @event = "welcome",
             my_id = newPlayer.Id,
             x = newPlayer.Position.X,
-            y = newPlayer.Position.Y
+            y = newPlayer.Position.Y,
+            others = existingPlayers
         };
         string welcomeJson = JsonSerializer.Serialize(welcomeObj);
         await newPlayer.ClientSocket.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(welcomeJson)), WebSocketMessageType.Text, true, CancellationToken.None);
