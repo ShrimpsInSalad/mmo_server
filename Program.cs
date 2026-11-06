@@ -31,12 +31,12 @@ app.Map("/ws", async context =>
         connectionManager.AddPlayer(newPlayer);
 
         var existingPlayers = connectionManager.GetAllPlayers()
-        .Where(p => p.Id != newPlayer.Id)
-        .Select(p => new {
-        id = p.Id,
-        x = p.Position.X,
-        y = p.Position.Y
-        }).ToList();
+            .Where(p => p.Id != newPlayer.Id && p.ClientSocket.State == WebSocketState.Open)
+            .Select(p => new {
+                id = p.Id,
+                x = p.Position.X,
+                y = p.Position.Y
+            }).ToList();
 
         var welcomeObj = new
         {
@@ -56,6 +56,9 @@ app.Map("/ws", async context =>
         await ReciveMessages(newPlayer);
 
         connectionManager.RemovePlayer(newPlayer.Id);
+
+        var leftObj = new { @event = "player_left", id = newPlayer.Id };
+        await connectionManager.BroadcastAsync(JsonSerializer.Serialize(leftObj));
     }
     else
     {
