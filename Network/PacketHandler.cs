@@ -56,9 +56,9 @@ public class PacketHandler
 
             bool isValidDistance = diffX <= 1 && diffY <= 1;
             bool isNewTile = diffX > 0 || diffY > 0;
-            bool isWall = GameMap.IsWall(targetX, targetY);
+            bool canMove = GameMap.CanMove(player.Position, targetX, targetY);
 
-            if (isValidDistance && isNewTile && !isWall)
+            if (isValidDistance && isNewTile && canMove)
             {
                 player.Position = new Position(targetX, targetY);
                 Console.WriteLine($"[Движение] Игрок {player.Name} (ID: {player.Id}) перешел в X:{targetX}, Y:{targetY}");
