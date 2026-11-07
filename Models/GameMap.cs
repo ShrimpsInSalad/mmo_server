@@ -24,17 +24,30 @@ public enum WallDirection : byte
 
 public static class GameMap
 {
-    public const int Width = 20;
-    public const int Height = 20;
+    public const int Width = 50;
+    public const int Height = 50;
 
-    private static byte[] _grid = new byte[Width * Height];
+    private static byte[] _grid;
 
     static GameMap()
     {
-        AddWall(12, 10, WallDirection.WallEast);
-        AddWall(12, 11, WallDirection.WallEast);
-        AddWall(12, 12, WallDirection.WallEast);
-        AddWall(12, 12, WallDirection.WallSouth);
+        LoadMap();
+    }
+
+    private static void LoadMap()
+    {
+        string filePath = "world_map.bin";
+
+        if (File.Exists(filePath))
+        {
+            _grid = File.ReadAllBytes(filePath);
+            Console.WriteLine($"[Карта] Успешно загружена! Размер: {_grid.Length} байт.");
+        }
+        else
+        {
+            Console.WriteLine($"[Карта] ВНИМАНИЕ! Файл {filePath} не найден. Создана пустая карта.");
+            _grid = new byte[Width * Height];
+        }
     }
 
     private static bool HasWall(int x, int y, WallDirection dir)
@@ -62,6 +75,9 @@ public static class GameMap
         if (toX < 0 || toX >= Width || toY < 0 || toY >= Height) return false;
 
         byte currentTile = _grid[from.Y * Width + from.X];
+
+        byte targetTile = _grid[toY * Width + toX];
+        if ((targetTile & (byte)WallDirection.IsNotWalkable) != 0) return false;
 
         if (toY < from.Y && toX == from.X) return (currentTile & (byte)WallDirection.WallNorth) == 0;
         if (toY > from.Y && toX == from.X) return (currentTile & (byte)WallDirection.WallSouth) == 0;

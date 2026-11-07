@@ -70,7 +70,7 @@ app.MapGet("/", () => "Server is alive");
 
 _ = Task.Run(async () =>
 {
-    using PeriodicTimer timer = new PeriodicTimer(TimeSpan.FromMilliseconds(500));
+    using PeriodicTimer timer = new PeriodicTimer(TimeSpan.FromMilliseconds(50));
 
     while (await timer.WaitForNextTickAsync())
     {
