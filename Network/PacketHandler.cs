@@ -128,5 +128,9 @@ public class PacketHandler
                 Console.WriteLine($"[Защита] Отклонен невалидный шаг игрока {player.Name} в X:{targetX}, Y:{targetY}");
             }
         }
+        else
+        {
+            Console.WriteLine($"[Ошибка Движения] В пакете от {player.Name} нет координат x или y!");
+        }
     }
 }

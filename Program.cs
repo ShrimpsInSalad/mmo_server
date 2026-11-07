@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using MMOServer.Config;
 using MMOServer.Models;
 using MMOServer.Network;
 using System;
@@ -11,6 +12,9 @@ using System.Threading.Tasks;
 
 var builder = WebApplication.CreateBuilder(args);
 var app = builder.Build();
+
+MapConfig.Init();
+GameMap.Init();
 
 app.UseWebSockets();
 

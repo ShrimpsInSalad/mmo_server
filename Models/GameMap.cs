@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MMOServer.Config;
+using System;
 using System.Collections;
 
 namespace MMOServer.Models;
@@ -23,10 +24,7 @@ public enum WallDirection : byte
 }
 
 public static class GameMap
-{
-    public const int Width = 50;
-    public const int Height = 50;
-
+{   
     private static byte[] _grid;
 
     static GameMap()
@@ -41,44 +39,38 @@ public static class GameMap
         if (File.Exists(filePath))
         {
             _grid = File.ReadAllBytes(filePath);
+
+            int expectedSize = MapConfig.MapWidth * MapConfig.MapHeight;
+
+            if (_grid.Length != expectedSize)
+            {
+                throw new Exception($"[Ошибка Карты] Размер файла {_grid.Length} байт не совпадает с конфигом ({expectedSize} байт)!");
+            }
+
             Console.WriteLine($"[Карта] Успешно загружена! Размер: {_grid.Length} байт.");
         }
         else
         {
             Console.WriteLine($"[Карта] ВНИМАНИЕ! Файл {filePath} не найден. Создана пустая карта.");
-            _grid = new byte[Width * Height];
+            _grid = new byte[MapConfig.MapWidth * MapConfig.MapHeight];
         }
     }
 
     private static bool HasWall(int x, int y, WallDirection dir)
     {
-        if (x < 0 || x >= Width || y < 0 || y >= Height) return true;
-        byte tile = _grid[y * Width + x];
+        if (x < 0 || x >= MapConfig.MapWidth || y < 0 || y >= MapConfig.MapHeight) return true;
+        byte tile = _grid[y * MapConfig.MapWidth + x];
         if ((tile & (byte)WallDirection.IsNotWalkable) != 0) return true;
         return (tile & (byte)dir) != 0;
     }
 
-    public static void AddWall(int x, int y, WallDirection dir)
-    {
-        if (x < 0 || x >= Width || y < 0 || y >= Height) return;
-
-        _grid[y * Width + x] |= (byte)dir;
-
-        if (dir == WallDirection.WallNorth && y > 0) _grid[(y - 1) * Width + x] |= (byte)WallDirection.WallSouth;
-        else if (dir == WallDirection.WallSouth && y < Height - 1) _grid[(y + 1) * Width + x] |= (byte)WallDirection.WallNorth;
-        else if (dir == WallDirection.WallEast && x < Width - 1) _grid[y * Width + (x + 1)] |= (byte)WallDirection.WallWest;
-        else if (dir == WallDirection.WallWest && x > 0) _grid[y * Width + (x - 1)] |= (byte)WallDirection.WallEast;
-
-
-    }
-
     public static bool CanMove(Position from, int toX, int toY)
     {
-        if (toX < 0 || toX >= Width || toY < 0 || toY >= Height) return false;
+        if (toX < 0 || toX >= MapConfig.MapWidth || toY < 0 || toY >= MapConfig.MapHeight) return false;
 
-        byte currentTile = _grid[from.Y * Width + from.X];
+        byte currentTile = _grid[from.Y * MapConfig.MapWidth + from.X];
 
-        byte targetTile = _grid[toY * Width + toX];
+        byte targetTile = _grid[toY * MapConfig.MapWidth + toX];
         if ((targetTile & (byte)WallDirection.IsNotWalkable) != 0) return false;
 
         if (toY < from.Y && toX == from.X) return (currentTile & (byte)WallDirection.WallNorth) == 0;
@@ -113,4 +105,5 @@ public static class GameMap
         return true; // Если ни одно условие блокировки не сработало
 
     }
+    public static void Init() { }
 }
