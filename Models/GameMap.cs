@@ -37,6 +37,12 @@ public static class GameMap
         AddWall(12, 12, WallDirection.WallSouth);
     }
 
+    private static bool HasWall(int x, int y, WallDirection dir)
+    {
+        if (x < 0 || x >= Width || y < 0 || y >= Height) return true;
+        return (_grid[y * Width + x] & (byte)dir) != 0;
+    }
+
     public static void AddWall(int x, int y, WallDirection dir)
     {
         if (x < 0 || x >= Width || y < 0 || y >= Height) return;
@@ -58,27 +64,33 @@ public static class GameMap
         byte currentTile = _grid[from.Y * Width + from.X];
 
         if (toY < from.Y && toX == from.X) return (currentTile & (byte)WallDirection.WallNorth) == 0;
-
-        // Движение на Юг (Y увеличился)
         if (toY > from.Y && toX == from.X) return (currentTile & (byte)WallDirection.WallSouth) == 0;
-
-        // Движение на Восток (X увеличился)
         if (toX > from.X && toY == from.Y) return (currentTile & (byte)WallDirection.WallEast) == 0;
-
-        // Движение на Запад (X уменьшился)
         if (toX < from.X && toY == from.Y) return (currentTile & (byte)WallDirection.WallWest) == 0;
 
         if (toX > from.X && toY < from.Y) // Северо-Восток
-            return (currentTile & (byte)WallDirection.WallNorth) == 0 && (currentTile & (byte)WallDirection.WallEast) == 0;
+            return !HasWall(from.X, from.Y, WallDirection.WallNorth) &&
+                   !HasWall(from.X, from.Y, WallDirection.WallEast) &&
+                   !HasWall(toX, from.Y, WallDirection.WallNorth) &&
+                   !HasWall(from.X, toY, WallDirection.WallEast);
 
         if (toX > from.X && toY > from.Y) // Юго-Восток
-            return (currentTile & (byte)WallDirection.WallSouth) == 0 && (currentTile & (byte)WallDirection.WallEast) == 0;
+            return !HasWall(from.X, from.Y, WallDirection.WallSouth) &&
+                   !HasWall(from.X, from.Y, WallDirection.WallEast) &&
+                   !HasWall(toX, from.Y, WallDirection.WallSouth) &&
+                   !HasWall(from.X, toY, WallDirection.WallEast);
 
         if (toX < from.X && toY < from.Y) // Северо-Запад
-            return (currentTile & (byte)WallDirection.WallNorth) == 0 && (currentTile & (byte)WallDirection.WallWest) == 0;
+            return !HasWall(from.X, from.Y, WallDirection.WallNorth) &&
+                   !HasWall(from.X, from.Y, WallDirection.WallWest) &&
+                   !HasWall(toX, from.Y, WallDirection.WallNorth) &&
+                   !HasWall(from.X, toY, WallDirection.WallWest);
 
         if (toX < from.X && toY > from.Y) // Юго-Запад
-            return (currentTile & (byte)WallDirection.WallSouth) == 0 && (currentTile & (byte)WallDirection.WallWest) == 0;
+            return !HasWall(from.X, from.Y, WallDirection.WallSouth) &&
+                   !HasWall(from.X, from.Y, WallDirection.WallWest) &&
+                   !HasWall(toX, from.Y, WallDirection.WallSouth) &&
+                   !HasWall(from.X, toY, WallDirection.WallWest);
 
         return true; // Если ни одно условие блокировки не сработало
 
