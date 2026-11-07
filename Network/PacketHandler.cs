@@ -1,5 +1,6 @@
 ﻿using MMOServer.Models;
 using System;
+using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
@@ -8,6 +9,46 @@ namespace MMOServer.Network;
 
 public class PacketHandler
 {
+    private static ConcurrentQueue<(Player player, string action)> _actionQueue = new ConcurrentQueue<(Player, string)>();
+
+    public static void EnqueueMessage(Player player, string jsonMessage)
+    {
+        _actionQueue.Enqueue((player, jsonMessage));
+    }
+
+    public static async Task ProcessQueue(ConnectionManager manager)
+    {
+        int processed = 0;
+
+        while (processed < 20 && _actionQueue.TryDequeue(out var item))
+        {
+            try
+            {
+                using JsonDocument doc = JsonDocument.Parse(item.action);
+                JsonElement root = doc.RootElement;
+                if (!root.TryGetProperty("action", out JsonElement actionProp)) continue;
+
+                string actionType = actionProp.GetString();
+                if (actionType == "move")
+                {
+                    await HandleMove(item.player, root, manager);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка обработки: {ex.Message}");
+            }
+
+            processed++;
+
+        }
+    }
+
+
+
+
+
+
     public static async Task HandleMessage(Player player, string jsonMessage, ConnectionManager manager)
     {
         try

@@ -68,6 +68,16 @@ app.Map("/ws", async context =>
 
 app.MapGet("/", () => "Server is alive");
 
+_ = Task.Run(async () =>
+{
+    using PeriodicTimer timer = new PeriodicTimer(TimeSpan.FromMilliseconds(50));
+
+    while (await timer.WaitForNextTickAsync())
+    {
+        await PacketHandler.ProcessQueue(connectionManager);
+    }
+});
+
 app.Run();
 
 async Task ReciveMessages(Player player)
@@ -89,7 +99,7 @@ async Task ReciveMessages(Player player)
             {
                 string jsonMessage = Encoding.UTF8.GetString(buffer, 0, result.Count);
 
-                await PacketHandler.HandleMessage(player, jsonMessage, connectionManager);
+                PacketHandler.EnqueueMessage(player, jsonMessage);
             }
         }
     }
