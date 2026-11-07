@@ -53,7 +53,9 @@ public static class GameMap
     private static bool HasWall(int x, int y, WallDirection dir)
     {
         if (x < 0 || x >= Width || y < 0 || y >= Height) return true;
-        return (_grid[y * Width + x] & (byte)dir) != 0;
+        byte tile = _grid[y * Width + x];
+        if ((tile & (byte)WallDirection.IsNotWalkable) != 0) return true;
+        return (tile & (byte)dir) != 0;
     }
 
     public static void AddWall(int x, int y, WallDirection dir)
