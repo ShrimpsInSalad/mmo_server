@@ -14,6 +14,8 @@ public class ChunkManager
 
     private Chunk[] _chunks;
 
+    public IEnumerable<Chunk> GetAllChunks() => _chunks;
+
     public ChunkManager()
     {
         _chunks = new Chunk[MapConfig.ChunksX * MapConfig.ChunksY];

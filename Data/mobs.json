@@ -1,0 +1,20 @@
+[
+  {
+    "TemplateId": 1,
+    "Name": "Goblin",
+    "MaxHp": 50,
+    "VisionRadius": 7,
+    "ChaseDistance": 15,
+    "SpeedTicks": 20,
+    "DefaultBrain": "Aggressive"
+  },
+  {
+    "TemplateId": 2,
+    "Name": "Deer",
+    "MaxHp": 20,
+    "VisionRadius": 5,
+    "ChaseDistance": 0,
+    "SpeedTicks": 30,
+    "DefaultBrain": "Passive"
+  }
+]

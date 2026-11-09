@@ -13,12 +13,17 @@ using System.Threading.Tasks;
 var builder = WebApplication.CreateBuilder(args);
 var app = builder.Build();
 
+MobDatabase.Init();
 MapConfig.Init();
 GameMap.Init();
 
 app.UseWebSockets();
 
 ConnectionManager connectionManager = new ConnectionManager();
+
+MobManager mobManager = new MobManager(connectionManager.Chunks);
+
+
 
 app.Map("/ws", async context =>
 {
@@ -78,9 +83,15 @@ _ = Task.Run(async () =>
 {
     using PeriodicTimer timer = new PeriodicTimer(TimeSpan.FromMilliseconds(50));
 
+    ulong serverTick = 0;
+
     while (await timer.WaitForNextTickAsync())
     {
+        serverTick++;
+
         await PacketHandler.ProcessQueue(connectionManager);
+
+        mobManager.UpdateActiveMobs(serverTick, connectionManager.GetAllPlayers());    
     }
 });
 
