@@ -54,6 +54,8 @@ public class Player
         set => _maxHealth = value;
     }
 
+    public int ChunkX { get; set; } = -1;
+    public int ChunkY { get; set; } = -1;
 
     public Player(int id, string name, WebSocket socket, Position startPosition)
     {

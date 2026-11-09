@@ -34,13 +34,16 @@ app.Map("/ws", async context =>
 
         connectionManager.AddPlayer(newPlayer);
 
+        var visibleChunks = connectionManager.Chunks.GetVisibleChunks(startPos.X, startPos.Y);
+        var visiblePlayersIds = visibleChunks.SelectMany(c => c.PlayersInside).ToHashSet();
+
         var existingPlayers = connectionManager.GetAllPlayers()
-            .Where(p => p.Id != newPlayer.Id && p.ClientSocket.State == WebSocketState.Open)
-            .Select(p => new {
-                id = p.Id,
-                x = p.Position.X,
-                y = p.Position.Y
-            }).ToList();
+                    .Where(p => p.Id != newPlayer.Id && visiblePlayersIds.Contains(p.Id) && p.ClientSocket.State == WebSocketState.Open)
+                    .Select(p => new {
+                        id = p.Id,
+                        x = p.Position.X,
+                        y = p.Position.Y
+                    }).ToList();
 
         var welcomeObj = new
         {
@@ -50,19 +53,18 @@ app.Map("/ws", async context =>
             y = newPlayer.Position.Y,
             others = existingPlayers
         };
-        string welcomeJson = JsonSerializer.Serialize(welcomeObj);
-        await newPlayer.ClientSocket.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(welcomeJson)), WebSocketMessageType.Text, true, CancellationToken.None);
+
+        await PacketUtility.SendAsync(newPlayer.ClientSocket, welcomeObj);
 
         var joinedObj = new { @event = "player_joined", id = newPlayer.Id, x = newPlayer.Position.X, y = newPlayer.Position.Y };
-        await connectionManager.BroadcastAsync(JsonSerializer.Serialize(joinedObj));
-
+        await connectionManager.BroadcastToVisibleAsync(newPlayer.Position.X, newPlayer.Position.Y, joinedObj, newPlayer.Id);
 
         await ReciveMessages(newPlayer);
 
         connectionManager.RemovePlayer(newPlayer.Id);
 
         var leftObj = new { @event = "player_left", id = newPlayer.Id };
-        await connectionManager.BroadcastAsync(JsonSerializer.Serialize(leftObj));
+        await connectionManager.BroadcastToVisibleAsync(newPlayer.Position.X, newPlayer.Position.Y, leftObj, newPlayer.Id);
     }
     else
     {

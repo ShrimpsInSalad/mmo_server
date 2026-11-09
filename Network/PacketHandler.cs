@@ -101,27 +101,8 @@ public class PacketHandler
 
             if (isValidDistance && isNewTile && canMove)
             {
-                player.Position = new Position(targetX, targetY);
-                Console.WriteLine($"[Движение] Игрок {player.Name} (ID: {player.Id}) перешел в X:{targetX}, Y:{targetY}");
-
-                var responseObj = new
-                {
-                    @event = "player_moved",
-                    id = player.Id,
-                    x = targetX,
-                    y = targetY
-                };
-
-                string jsonResponse = JsonSerializer.Serialize(responseObj);
-
-                await manager.BroadcastAsync(jsonResponse);
-
-                //byte[] bytes = Encoding.UTF8.GetBytes(jsonResponse);
-                //await player.ClientSocket.SendAsync(
-                //    new ArraySegment<byte>(bytes),
-                //    WebSocketMessageType.Text,
-                //    true,
-                //    CancellationToken.None);
+                await manager.UpdatePlayerPosition(player, new Position(targetX, targetY));
+                Console.WriteLine($"[Движение] {player.Name} (ID: {player.Id}) перешел в X:{targetX}, Y:{targetY}");
             }
             else
             {
