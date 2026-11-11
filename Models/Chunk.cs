@@ -11,6 +11,8 @@ public class Chunk
     public int ChunkX { get; set; }
     public int ChunkY { get; set; }
 
+    public readonly object ChunkLock = new object();
+
     public HashSet<int> PlayersInside { get; set; } = new HashSet<int>();
     public HashSet<int> MobsInside { get; set; } = new HashSet<int>();
 

@@ -20,7 +20,7 @@ public class PacketHandler
     {
         int processed = 0;
 
-        while (processed < 20 && _actionQueue.TryDequeue(out var item))
+        while (processed < 100 && _actionQueue.TryDequeue(out var item))
         {
             try
             {
@@ -60,7 +60,7 @@ public class PacketHandler
 
             if (isValidDistance && isNewTile && canMove)
             {
-                await manager.UpdatePlayerPosition(player, new Position(targetX, targetY), mobManager);
+                manager.UpdatePlayerPosition(player, new Position(targetX, targetY), mobManager);
                 Console.WriteLine($"[Движение] {player.Name} (ID: {player.Id}) перешел в X:{targetX}, Y:{targetY}");
             }
             else

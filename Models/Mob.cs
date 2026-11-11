@@ -8,7 +8,7 @@ namespace MMOServer.Models;
 
 public interface IMobBrain
 {
-    void Update(Mob body, ulong currentServerTick);
+    void Update(Mob body, ulong currentServerTick, Network.ConnectionManager connManager, Network.MobManager mobManager);
 }
 
 public class Mob
@@ -29,6 +29,12 @@ public class Mob
     public int MobSlot { get; private set; }
 
     public IMobBrain Brain { get; set; }
+
+    public ulong LastHealTick { get; set; } = 0;
+
+    public bool IsPanicking { get; set; } = false;
+
+
 
     public Mob(int id, int templateId, Position spawnPos)
     {

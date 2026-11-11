@@ -27,7 +27,7 @@ public class ConnectionManager
 
             if (currentChunk != null)
             {
-                currentChunk.PlayersInside.Add(player.Id);
+                lock (currentChunk.ChunkLock) { currentChunk.PlayersInside.Add(player.Id); }
             }
 
             Console.WriteLine($"[Сервер] Игрок {player.Name} зашел в чанк [{cx},{cy}]. Всего онлайн: {_onlinePlayers.Count}");
@@ -43,9 +43,8 @@ public class ConnectionManager
 
             if (currentChunk != null)
             {
-                currentChunk.PlayersInside.Remove(removedPlayer.Id);    
+                lock (currentChunk.ChunkLock) { currentChunk.PlayersInside.Remove(removedPlayer.Id); }
             }
-
             Console.WriteLine($"[Сервер] Игрок {removedPlayer.Name} отключился. Всего онлайн: {_onlinePlayers.Count}");
         }
     }
@@ -94,10 +93,14 @@ public class ConnectionManager
 
         if (oldCx != newCx || oldCy != newCy)
         {
-            Chunks.GetChunk(oldCx, oldCy)?.PlayersInside.Remove(player.Id);
+            var oldChunk = Chunks.GetChunk(oldCx, oldCy);
+            if (oldChunk != null) lock (oldChunk.ChunkLock) { oldChunk.PlayersInside.Remove(player.Id); }
+
             player.ChunkX = newCx;
             player.ChunkY = newCy;
-            Chunks.GetChunk(newCx, newCy)?.PlayersInside.Add(player.Id);
+
+            var newChunk = Chunks.GetChunk(newCx, newCy);
+            if (newChunk != null) lock (newChunk.ChunkLock) { newChunk.PlayersInside.Add(player.Id); }
         }
 
         var oldChunks = Chunks.GetVisibleChunks(oldPos.X, oldPos.Y).ToHashSet();
@@ -160,6 +163,8 @@ public class ConnectionManager
         }
 
         SendMobsInChunksToPlayer(player, chunksEntered, mobManager);
+
+        mobManager.CheckAggroForPlayer(player, newChunks);  
     }
 
     // Метод точечной отправки мобов одному игроку (когда он открывает новую зону)

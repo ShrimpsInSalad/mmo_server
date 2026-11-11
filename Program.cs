@@ -21,7 +21,7 @@ app.UseWebSockets();
 
 ConnectionManager connectionManager = new ConnectionManager();
 
-MobManager mobManager = new MobManager(connectionManager.Chunks);
+MobManager mobManager = new MobManager(connectionManager);
 
 
 
@@ -58,11 +58,14 @@ app.Map("/ws", async context =>
             y = newPlayer.Position.Y,
             others = existingPlayers
         };
+        PacketUtility.EnqueuePacket(newPlayer, welcomeObj);
 
-        await PacketUtility.SendAsync(newPlayer.ClientSocket, welcomeObj);
+        connectionManager.SendMobsInChunksToPlayer(newPlayer, visibleChunks, mobManager);
 
         var joinedObj = new { @event = "player_joined", id = newPlayer.Id, x = newPlayer.Position.X, y = newPlayer.Position.Y };
-        await connectionManager.BroadcastToVisibleAsync(newPlayer.Position.X, newPlayer.Position.Y, joinedObj, newPlayer.Id);
+        connectionManager.BroadcastToChunks(visibleChunks, joinedObj, newPlayer.Id);
+
+        await PacketUtility.SendBufferedPacketsAsync(newPlayer);
 
         await ReciveMessages(newPlayer);
 

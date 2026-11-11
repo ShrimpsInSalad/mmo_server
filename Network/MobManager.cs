@@ -13,11 +13,13 @@ public class MobManager
 
     private readonly ConcurrentDictionary<int, Mob> _activeMobs = new();
 
+    private readonly ConnectionManager _connManager;
     private readonly ChunkManager _chunkManager;
 
-    public MobManager(ChunkManager chunkManager)
+    public MobManager(ConnectionManager connManager)
     {
-        _chunkManager = chunkManager;
+        _connManager = connManager;
+        _chunkManager = connManager.Chunks;
     }
 
     public void AddMob(Mob mob)
@@ -31,7 +33,7 @@ public class MobManager
             Chunk chunk = _chunkManager.GetChunk(cx, cy);
             if (chunk != null)
             {
-                chunk.MobsInside.Add(mob.Id);
+                lock (chunk.ChunkLock) { chunk.MobsInside.Add(mob.Id); }
             }
         }
     }
@@ -42,7 +44,7 @@ public class MobManager
             Chunk chunk = _chunkManager.GetChunk(removedMob.ChunkX, removedMob.ChunkY);
             if (chunk != null)
             {
-                chunk.MobsInside.Remove(mobId);
+                lock (chunk.ChunkLock) { chunk.MobsInside.Remove(mobId); }
             }
         }
     }
@@ -71,7 +73,7 @@ public class MobManager
                 {
                     if (mob.MobSlot == targetSlot)
                     {
-                         mob.Brain?.Update(mob, currentServerTick);
+                         mob.Brain?.Update(mob, currentServerTick, _connManager, this);
                     }
                 }
             }
@@ -97,10 +99,14 @@ public class MobManager
 
         if (oldCx != newCx || oldCy != newCy)
         {
-            _chunkManager.GetChunk(oldCx, oldCy)?.MobsInside.Remove(mob.Id);
+            var oldChunk = _chunkManager.GetChunk(oldCx, oldCy);
+            if (oldChunk != null) lock (oldChunk.ChunkLock) { oldChunk.MobsInside.Remove(mob.Id); }
+
             mob.ChunkX = newCx;
             mob.ChunkY = newCy;
-            _chunkManager.GetChunk(newCx, newCy)?.MobsInside.Add(mob.Id);
+
+            var newChunk = _chunkManager.GetChunk(newCx, newCy);
+            if (newChunk != null) lock (newChunk.ChunkLock) { newChunk.MobsInside.Add(mob.Id); }
         }
 
         // 2. МАТЕМАТИКА ВИДИМОСТИ (Та же самая!)
@@ -150,6 +156,91 @@ public class MobManager
             y = newPos.Y
         };
         connManager.BroadcastToChunks(chunksEntered, joinedEvent);
+    }
+
+    public void CheckAggroForPlayer(Player player, IEnumerable<Chunk> visibleChunks)
+    {
+        foreach (var chunk in visibleChunks)
+        {
+            foreach (var mobId in chunk.MobsInside)
+            {
+                if (_activeMobs.TryGetValue(mobId, out Mob mob))
+                {
+                    // Проверяем только свободных мобов (которые еще ни с кем не дерутся)
+                    if (mob.CurrentTargetId == null)
+                    {
+                        var template = MobDatabase.GetTemplate(mob.TemplateId);
+
+                        // Если моб агрессивный, проверяем дистанцию
+                        if (template != null && template.Temperament == "Aggressive")
+                        {
+                            int dist = Math.Max(Math.Abs(mob.Position.X - player.Position.X), Math.Abs(mob.Position.Y - player.Position.Y));
+
+                            // Если игрок подошел слишком близко — моб его замечает
+                            if (dist <= template.VisionRadius)
+                            {
+                                mob.CurrentTargetId = player.Id;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    public void DamageMob(int mobId, int damage, int attackerId, ConnectionManager connManager)
+    {
+        if (_activeMobs.TryGetValue(mobId, out Mob mob))
+        {
+            var template = MobDatabase.GetTemplate(mob.TemplateId);
+            if (template == null) return;
+
+            // Наносим урон
+            mob.CurrentHp -= damage;
+
+            // 1. Моб запоминает обидчика (Это активирует Нейтралов и Трусов в UniversalBrain)
+            mob.CurrentTargetId = attackerId;
+
+            // 2. СТАЙНАЯ ЛОГИКА (Групповой агр по тегу)
+            if (template.IsPackMob && !string.IsNullOrEmpty(template.GroupTag))
+            {
+                var visibleChunks = _chunkManager.GetVisibleChunks(mob.Position.X, mob.Position.Y);
+                foreach (var chunk in visibleChunks)
+                {
+                    foreach (var friendId in chunk.MobsInside)
+                    {
+                        // Не проверяем самого себя
+                        if (friendId != mob.Id && _activeMobs.TryGetValue(friendId, out Mob friend))
+                        {
+                            // Зовем на помощь только тех, кто еще ни с кем не дерется
+                            if (friend.CurrentTargetId == null)
+                            {
+                                var friendTemplate = MobDatabase.GetTemplate(friend.TemplateId);
+                                // Если у соседа такой же тег (например, "goblin") -> он агрится на того же врага!
+                                if (friendTemplate != null && friendTemplate.GroupTag == template.GroupTag)
+                                {
+                                    friend.CurrentTargetId = attackerId;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 3. Отправляем всем зрителям пакет о том, что моб получил урон
+            var damageEvent = new { @event = "mob_damaged", id = mob.Id, damage = damage, hp = mob.CurrentHp };
+            var chunksToNotify = _chunkManager.GetVisibleChunks(mob.Position.X, mob.Position.Y);
+            connManager.BroadcastToChunks(chunksToNotify, damageEvent);
+
+            // 4. Проверка на смерть
+            if (mob.CurrentHp <= 0)
+            {
+                // TODO: Реализовать логику смерти (выпадение лута, удаление моба, пакет mob_died)
+                RemoveMob(mob.Id);
+                var deathEvent = new { @event = "mob_died", id = mob.Id };
+                connManager.BroadcastToChunks(chunksToNotify, deathEvent);
+            }
+        }
     }
 }
 

@@ -1,20 +1,53 @@
 [
   {
     "TemplateId": 1,
-    "Name": "Goblin",
+    "Name": "Goblin Spearman",
     "MaxHp": 50,
     "VisionRadius": 7,
     "ChaseDistance": 15,
     "SpeedTicks": 20,
-    "DefaultBrain": "Aggressive"
+    "AttackType": "Melee",
+    "AttackRange": 1,
+    "Damage": 5,
+    "CanHeal": false,
+    "HealCooldownTicks": 0,
+    "FleesOnLowHp": true,
+    "GroupTag": "goblin",
+    "IsPackMob": true,
+    "Temperament": "Aggressive"
   },
   {
     "TemplateId": 2,
+    "Name": "Guard Archer",
+    "MaxHp": 100,
+    "VisionRadius": 10,
+    "ChaseDistance": 20,
+    "SpeedTicks": 15,
+    "AttackType": "Ranged",
+    "AttackRange": 8,
+    "Damage": 15,
+    "CanHeal": true,
+    "HealCooldownTicks": 200,
+    "FleesOnLowHp": false,
+    "GroupTag": "guard",
+    "IsPackMob": true,
+    "Temperament": "Neutral"
+  },
+  {
+    "TemplateId": 3,
     "Name": "Deer",
     "MaxHp": 20,
     "VisionRadius": 5,
     "ChaseDistance": 0,
-    "SpeedTicks": 30,
-    "DefaultBrain": "Passive"
+    "SpeedTicks": 10,
+    "AttackType": "Melee",
+    "AttackRange": 1,
+    "Damage": 0,
+    "CanHeal": false,
+    "HealCooldownTicks": 0,
+    "FleesOnLowHp": true,
+    "GroupTag": "animal",
+    "IsPackMob": false,
+    "Temperament": "Coward"
   }
 ]
