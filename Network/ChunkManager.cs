@@ -47,7 +47,7 @@ public class ChunkManager
 
     public List<Chunk> GetVisibleChunks(int tileX, int tileY)
     {
-        var visible = new List<Chunk>();
+        var visible = new List<Chunk>(9);
 
         var (centerCx, centerCy) = GetChunkCoords(tileX, tileY);
 

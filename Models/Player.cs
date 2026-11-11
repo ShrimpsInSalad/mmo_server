@@ -13,6 +13,10 @@ public class Player
 
     public bool IsDirty { get; set; } = false;
 
+    public readonly object BufferLock = new object();
+
+    public List<object> OutgoingPackets { get; } = new List<object>();
+
 
     private Position _position;
     private int _health = 10;

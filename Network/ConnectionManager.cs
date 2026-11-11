@@ -65,10 +65,10 @@ public class ConnectionManager
     public async Task BroadcastToVisibleAsync(int tileX, int tileY, object payload, int? excludePlayerId = null)
     {
         var visibleChunks = Chunks.GetVisibleChunks(tileX, tileY);
-        await BroadcastToChunksAsync(visibleChunks, payload, excludePlayerId);
+        BroadcastToChunks(visibleChunks, payload, excludePlayerId);
     }
 
-    public async Task BroadcastToChunksAsync(IEnumerable<Chunk> chunks, object payload, int? excludePlayerId = null)
+    public void BroadcastToChunks(IEnumerable<Chunk> chunks, object payload, int? excludePlayerId = null)
     {
         foreach (Chunk chunk in chunks)
         {
@@ -78,13 +78,13 @@ public class ConnectionManager
 
                 if (_onlinePlayers.TryGetValue(playerId, out Player p) && p.ClientSocket.State == WebSocketState.Open)
                 {
-                    await PacketUtility.SendAsync(p.ClientSocket, payload);
+                    PacketUtility.EnqueuePacket(p, payload);
                 }
             }
         }
     }
 
-    public async Task UpdatePlayerPosition(Player player, Position newPos)
+    public  void UpdatePlayerPosition(Player player, Position newPos, MobManager mobManager)
     {
         Position oldPos = player.Position;
         player.Position = newPos;
@@ -103,28 +103,50 @@ public class ConnectionManager
         var oldChunks = Chunks.GetVisibleChunks(oldPos.X, oldPos.Y).ToHashSet();
         var newChunks = Chunks.GetVisibleChunks(newPos.X, newPos.Y).ToHashSet();
 
-        var chunksLeft = oldChunks.Except(newChunks).ToList();
-        var chunksEntered = newChunks.Except(oldChunks).ToList();
-        var chunksStayed = oldChunks.Intersect(newChunks).ToList();
+        var chunksLeft = new List<Chunk>();
+        var chunksEntered = new List<Chunk>();
+        var chunksStayed = new List<Chunk>();
+
+        foreach (var chunk in oldChunks)
+        {
+            if (newChunks.Contains(chunk))
+            {
+                chunksStayed.Add(chunk);
+            }
+            else
+            {
+                chunksLeft.Add(chunk);
+            }
+        }
+
+        foreach (var chunk in newChunks)
+        {
+            if (!oldChunks.Contains(chunk))
+            {
+                chunksEntered.Add(chunk);
+            }
+        }
 
         // А) Для тех, кто видел нас ДО и ПОСЛЕ шага -> шлем обычный player_moved
         var moveEvent = new { @event = "player_moved", id = player.Id, x = newPos.X, y = newPos.Y };
-        await BroadcastToChunksAsync(chunksStayed, moveEvent);
+        BroadcastToChunks(chunksStayed, moveEvent);
 
         // Б) Для тех, кто остался ПОЗАДИ -> шлем им, что мы исчезли (player_left)
         var leftEvent = new { @event = "player_left", id = player.Id };
-        await BroadcastToChunksAsync(chunksLeft, leftEvent, player.Id);
+        BroadcastToChunks(chunksLeft, leftEvent, player.Id);
 
         foreach (var chunk in chunksLeft)
         {
             foreach (var pId in chunk.PlayersInside)
             {
-                await PacketUtility.SendAsync(player.ClientSocket, new { @event = "player_left", id = pId });
+                PacketUtility.EnqueuePacket(player, new { @event = "player_left", id = pId });
             }
         }
 
         var joinedEvent = new { @event = "player_joined", id = player.Id, x = newPos.X, y = newPos.Y };
-        await BroadcastToChunksAsync(chunksEntered, joinedEvent, player.Id);
+
+        BroadcastToChunks(chunksEntered, joinedEvent, player.Id);
+
         foreach (var chunk in chunksEntered)
         {
             foreach (var pId in chunk.PlayersInside)
@@ -132,7 +154,34 @@ public class ConnectionManager
                 if (pId == player.Id) continue;
                 if (_onlinePlayers.TryGetValue(pId, out Player other))
                 {
-                    await PacketUtility.SendAsync(player.ClientSocket, new { @event = "player_joined", id = other.Id, x = other.Position.X, y = other.Position.Y });
+                    PacketUtility.EnqueuePacket(player, new { @event = "player_joined", id = other.Id, x = other.Position.X, y = other.Position.Y });
+                }
+            }
+        }
+
+        SendMobsInChunksToPlayer(player, chunksEntered, mobManager);
+    }
+
+    // Метод точечной отправки мобов одному игроку (когда он открывает новую зону)
+    public void SendMobsInChunksToPlayer(Player player, IEnumerable<Chunk> chunks, MobManager mobManager)
+    {
+        foreach (var chunk in chunks)
+        {
+            foreach (var mobId in chunk.MobsInside)
+            {
+                var mob = mobManager.GetMob(mobId);
+                if (mob != null)
+                {
+                    var mobJoinedEvent = new
+                    {
+                        @event = "mob_joined",
+                        id = mob.Id,
+                        template_id = mob.TemplateId,
+                        hp = mob.CurrentHp,
+                        x = mob.Position.X,
+                        y = mob.Position.Y
+                    };
+                    PacketUtility.EnqueuePacket(player, mobJoinedEvent);
                 }
             }
         }

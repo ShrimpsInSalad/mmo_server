@@ -89,9 +89,14 @@ _ = Task.Run(async () =>
     {
         serverTick++;
 
-        await PacketHandler.ProcessQueue(connectionManager);
+        await PacketHandler.ProcessQueue(connectionManager, mobManager);
 
-        mobManager.UpdateActiveMobs(serverTick, connectionManager.GetAllPlayers());    
+        mobManager.UpdateActiveMobs(serverTick, connectionManager.GetAllPlayers());
+
+        foreach (var player in connectionManager.GetAllPlayers())
+        {
+            await PacketUtility.SendBufferedPacketsAsync(player);
+        }
     }
 });
 

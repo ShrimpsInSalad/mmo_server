@@ -16,7 +16,7 @@ public class PacketHandler
         _actionQueue.Enqueue((player, jsonMessage));
     }
 
-    public static async Task ProcessQueue(ConnectionManager manager)
+    public static async Task ProcessQueue(ConnectionManager manager, MobManager mobManager)
     {
         int processed = 0;
 
@@ -31,7 +31,7 @@ public class PacketHandler
                 string actionType = actionProp.GetString();
                 if (actionType == "move")
                 {
-                    await HandleMove(item.player, root, manager);
+                    await HandleMove(item.player, root, manager, mobManager);
                 }
             }
             catch (Exception ex)
@@ -44,48 +44,7 @@ public class PacketHandler
         }
     }
 
-
-
-
-
-
-    public static async Task HandleMessage(Player player, string jsonMessage, ConnectionManager manager)
-    {
-        try
-        {
-            using JsonDocument doc = JsonDocument.Parse(jsonMessage);
-
-            JsonElement root = doc.RootElement;
-
-            if (!root.TryGetProperty("action", out JsonElement actionProperty))
-            {
-                Console.WriteLine($"[Ошибка] Игрок {player.Id} прислал пакет без поля 'action'");
-                return;
-            }
-
-            string action = actionProperty.GetString() ?? string.Empty;
-
-            switch (action)
-            {
-                case "ping":
-                    Console.WriteLine($"[Ping] Игрок {player.Name} прислал тестовый пинг.");
-                    break;
-                case "move":
-                    await HandleMove(player, root, manager);
-                    break;
-                default:
-                    Console.WriteLine($"[Внимание] Неизвестная команда '{action}' от игрока {player.Name}");
-                    break;
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[Ошибка JSON] Не удалось распарсить пакет от {player.Name}: {ex.Message}");
-        }
-    }
-
-
-    private static async Task HandleMove(Player player, JsonElement root, ConnectionManager manager)
+    private static async Task HandleMove(Player player, JsonElement root, ConnectionManager manager, MobManager mobManager)
     {
         if (root.TryGetProperty("x", out JsonElement xProp) && root.TryGetProperty("y", out JsonElement yProp))
         {
@@ -101,7 +60,7 @@ public class PacketHandler
 
             if (isValidDistance && isNewTile && canMove)
             {
-                await manager.UpdatePlayerPosition(player, new Position(targetX, targetY));
+                await manager.UpdatePlayerPosition(player, new Position(targetX, targetY), mobManager);
                 Console.WriteLine($"[Движение] {player.Name} (ID: {player.Id}) перешел в X:{targetX}, Y:{targetY}");
             }
             else
